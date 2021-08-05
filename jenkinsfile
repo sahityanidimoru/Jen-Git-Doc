@@ -1,0 +1,70 @@
+pipeline {
+    agent { label 'Java' }
+    stages { 
+        stage ("SCM Checkin-1") {
+            steps {
+               script {
+                   if( !fileExists('JGD')){
+                       stage ('Create JGD folder'){
+                            //creating all folders up-to and including
+                            sh "mkdir JGD"
+                       }
+                   }
+                    if( !fileExists('samplemaven')){
+                       stage ('Create Maven folder'){
+                            //creating all folders up-to and including
+                            sh "mkdir samplemaven"
+                       }
+                   }
+                }
+                dir("samplemaven"){
+                     git branch: 'master', url: 'https://github.com/sahityanidimoru/SampleMaven'
+                }
+                dir("JGD"){
+                     git branch: 'master', url: 'https://github.com/sahityanidimoru/Jen-Git-Doc'
+                }
+             }
+        }
+        stage ("maven build") {
+            tools {
+                maven 'maven-3.6.2'
+                jdk 'JDK1.8'
+            }
+            steps {
+                dir("samplemaven"){
+                sh "mvn package"
+            }
+          }
+        }
+        stage( 'Build Image and run container'){
+	    input {
+                 message 'Mvn Package is Successfull, I can Proceed'
+            }
+        }
+        stage ("Build the Docker Image") {
+            steps {
+                sh "docker build . -t sahityanidimoru/tomcatcust01"
+            }
+            steps {
+                sh "docker run -d -p 90:8080 --name cont01 sahityanidimoru/tomcatcust01"
+            }
+        }
+      
+        stage ("Push to Docker HUB") {
+            steps {
+		withDockerRegistry(credentialsId: 'Docker-Hub', url: 'docker.io/sahityanidimoru') {
+			sh "docker push sahityanidimoru/tomcatcust01"
+		}
+            }
+         }
+        stage ("Cleanup the previous Docker Image and container") {
+            input {
+                    message 'Can we Delete the Docker image and Container'
+            }
+            steps {
+                sh "docker rm cont01 -f"
+                sh "docker image rmi sahityanidimoru/tomcatcust01 -f"
+            }
+         }
+     }
+}
