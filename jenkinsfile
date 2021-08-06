@@ -36,7 +36,7 @@ pipeline {
             }
           }
         }
-        stage( 'Build Image and run container'){
+        stage( "Build Image and run container"){
 	    input {
                  message 'Mvn Package is Successfull, I can Proceed'
             }
